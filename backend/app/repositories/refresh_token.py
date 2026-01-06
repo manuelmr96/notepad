@@ -16,7 +16,11 @@ from app.models import RefreshToken
 
 
 def _now() -> datetime.datetime:
-    return datetime.datetime.now(datetime.UTC)
+    # NAIVE UTC: the refresh_tokens.expires_at / revoked_at columns are
+    # TIMESTAMP WITHOUT TIME ZONE (Plan 03 locked schema, matching `now()`
+    # server defaults). asyncpg refuses to bind a tz-aware datetime to a naive
+    # column, so all comparisons/writes here use naive UTC.
+    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
 
 class RefreshTokenRepository:

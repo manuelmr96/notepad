@@ -64,7 +64,9 @@ async def _issue_tokens(
     """Mint an access token + a fresh refresh token, persisting only its hash."""
     access_token = make_access_token(str(user.id))
     raw = new_refresh_token()
-    expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+    # Naive UTC to match the TIMESTAMP WITHOUT TIME ZONE expires_at column
+    # (Plan 03 locked schema); asyncpg rejects tz-aware values for naive columns.
+    expires_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None) + datetime.timedelta(
         days=settings.REFRESH_TOKEN_TTL_DAYS
     )
     await rt_repo.create(user.id, hash_refresh_token(raw), expires_at)
