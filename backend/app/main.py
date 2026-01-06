@@ -38,10 +38,7 @@ async def health() -> dict:
 
 # Routers (imported after `app` is defined; routers import `limiter` from
 # app.state, so there is no circular import with this module).
-from app.routers import auth  # noqa: E402
+from app.routers import auth, notes  # noqa: E402
 
 app.include_router(auth.router)
-
-# Further router includes added by later plans:
-#   from app.routers import notes
-#   app.include_router(notes.router)
+app.include_router(notes.router)
