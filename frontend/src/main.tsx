@@ -1,17 +1,22 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider } from "react-router-dom";
 import "./index.css";
-import App from "./App.tsx";
+import { AuthGate } from "./components/AuthGate";
+import { router } from "./router";
 
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      {/* TODO(Plan 05): replace <App /> with <RouterProvider router={router} />
-          once auth/notes routes exist. App is a placeholder shell for now. */}
-      <App />
+      {/* AuthGate runs the boot-time silent /auth/refresh (AUTH-03) and blocks
+          rendering on a spinner until it resolves, so the router's redirect
+          decisions see a settled session. */}
+      <AuthGate>
+        <RouterProvider router={router} />
+      </AuthGate>
     </QueryClientProvider>
   </StrictMode>,
 );
