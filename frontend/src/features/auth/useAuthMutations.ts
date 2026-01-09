@@ -73,6 +73,8 @@ async function postCredentials(
 
   // Memory-only store (no persisted token) — T-06-01.
   useAuth.getState().setToken(data.access_token);
+  // Capture the email for the sidebar user menu (D-04) — display-only, memory-only.
+  useAuth.getState().setEmail(values.email);
 }
 
 export function useLogin() {
