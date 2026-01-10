@@ -4,9 +4,11 @@ Token model (per CLAUDE.md / 01-RESEARCH Pattern 4):
   * Access token: short-lived JWT (~15 min), returned in the JSON body only and
     held in client memory — never in a cookie (T-04-04).
   * Refresh token: high-entropy random value in an httpOnly / Secure /
-    SameSite=Strict cookie scoped to ``/auth``. Only its sha256 hash is stored in
-    the Postgres ``refresh_tokens`` denylist (T-04-07); validity is the denylist,
-    not the cookie alone.
+    SameSite=Strict cookie scoped to ``settings.COOKIE_PATH`` (default
+    ``/api/auth`` — must be a prefix of the public, proxy-mounted refresh path
+    ``/api/auth/refresh`` so the browser actually sends it; see config.py). Only
+    its sha256 hash is stored in the Postgres ``refresh_tokens`` denylist
+    (T-04-07); validity is the denylist, not the cookie alone.
 
 Security controls:
   * /login is rate-limited (slowapi, T-04-01) and returns an identical generic
@@ -53,7 +55,7 @@ def _set_refresh_cookie(response: Response, raw: str) -> None:
         httponly=True,
         secure=settings.COOKIE_SECURE,
         samesite="strict",
-        path="/auth",
+        path=settings.COOKIE_PATH,
         max_age=settings.REFRESH_TOKEN_TTL_DAYS * 86400,
     )
 
@@ -135,14 +137,14 @@ async def refresh(
     token = await rt_repo.get_active_by_hash(old_hash)
     if token is None:
         # Unknown / revoked / expired -> clear the stale cookie and reject.
-        response.delete_cookie("refresh_token", path="/auth")
+        response.delete_cookie("refresh_token", path=settings.COOKIE_PATH)
         raise unauthorized
 
     # Rotate: revoke the presented token, issue a brand-new one (T-04-03).
     await rt_repo.revoke(old_hash)
     user = await UserRepository(session).get_by_id(token.user_id)
     if user is None:
-        response.delete_cookie("refresh_token", path="/auth")
+        response.delete_cookie("refresh_token", path=settings.COOKIE_PATH)
         raise unauthorized
     tokens = await _issue_tokens(response, user, rt_repo)
     await session.commit()
@@ -160,7 +162,7 @@ async def logout(
     if raw:
         await RefreshTokenRepository(session).revoke(hash_refresh_token(raw))
         await session.commit()
-    response.delete_cookie("refresh_token", path="/auth")
+    response.delete_cookie("refresh_token", path=settings.COOKIE_PATH)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
 
@@ -173,5 +175,5 @@ async def logout_all(
 ) -> dict:
     revoked = await RefreshTokenRepository(session).revoke_all(user.id)
     await session.commit()
-    response.delete_cookie("refresh_token", path="/auth")
+    response.delete_cookie("refresh_token", path=settings.COOKIE_PATH)
     return {"revoked": revoked}

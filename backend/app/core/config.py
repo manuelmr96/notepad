@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_TTL_DAYS: int = 30
     CORS_ORIGINS: str = ""  # comma-separated; empty => same-origin, no CORS
     COOKIE_SECURE: bool = True
+    # Path scope for the refresh-token cookie. MUST be a prefix of the public,
+    # browser-visible refresh path. The SPA reaches the API same-origin under the
+    # `/api` proxy mount (Vite dev proxy + nginx `location /api/`), so the browser
+    # issues `POST /api/auth/refresh`. Per RFC 6265 path-matching, the cookie is
+    # only sent on request paths under this value — it MUST cover `/api/auth/...`,
+    # not the bare `/auth` (which the browser never requests directly).
+    COOKIE_PATH: str = "/api/auth"
 
 
 settings = Settings()  # type: ignore[call-arg]
