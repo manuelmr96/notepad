@@ -55,7 +55,11 @@ class NoteRepository:
             content_schema_version=1,
         )
         self.session.add(page)
-        await self.session.flush()
+        # MUST commit (not just flush): each HTTP request gets a fresh session
+        # from ``get_session`` that does NOT commit after yield, so a flush-only
+        # create is rolled back when the request session closes — the row never
+        # persists and every later GET/PATCH 404s. Mirrors ``update`` below.
+        await self.session.commit()
         await self.session.refresh(page)
         return page
 
