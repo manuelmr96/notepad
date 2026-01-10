@@ -26,9 +26,12 @@ WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Copy application source.
+# Copy application source plus the Alembic config + migrations, which the
+# Compose start command runs via `alembic upgrade head` (migrate-on-start).
 COPY app ./app
 COPY pyproject.toml ./
+COPY alembic.ini ./
+COPY migrations ./migrations
 
 EXPOSE 8000
 
