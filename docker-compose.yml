@@ -1,0 +1,58 @@
+# Notepad full-stack orchestration.
+#
+# Three services on one private network:
+#   postgres  — the only stateful piece (named volume `pgdata`); not published
+#               to the host by default. Gated by a pg_isready healthcheck.
+#   backend   — FastAPI; waits for a healthy DB, runs `alembic upgrade head`
+#               (migrate-on-start, PLAT-03), then serves uvicorn on :8000.
+#   frontend  — nginx serving the built Vite SPA and reverse-proxying /api ->
+#               backend:8000 (same-origin, so SameSite=Strict cookies work).
+#
+# Quickstart: cp .env.example .env  (set a strong SECRET_KEY), then
+#   docker compose up --build
+# App: http://localhost:5173   API docs: http://localhost:8000/docs
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: notepad
+      POSTGRES_PASSWORD: notepad
+      POSTGRES_DB: notepad
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notepad"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # Not published to the host by default — the backend reaches it over the
+    # compose network. Uncomment to inspect the DB directly from the host.
+    # ports:
+    #   - "5432:5432"
+
+  backend:
+    build: ./backend
+    # Migrate-on-start (PLAT-03), then serve. The DB healthcheck gates this so
+    # the migration never races an unready Postgres (avoids a crash loop).
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    env_file: .env
+    environment:
+      # Override the .env value to the compose-network DB host regardless of
+      # what a developer set for a host-side .env (keeps bring-up turnkey).
+      DATABASE_URL: postgresql+asyncpg://notepad:notepad@postgres:5432/notepad
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  pgdata: {}
