@@ -1,30 +1,4 @@
-"""Wave 0 async backend test harness.
-
-Provides the fixtures every later backend test file (Plans 04 auth, 05 notes,
-SEC-01 isolation) builds on:
-
-  * ``db_session``         — a per-test transactional AsyncSession (rolled back
-                             after each test => fast, fully isolated, no bleed).
-  * ``app_client``         — httpx.AsyncClient over ASGITransport with
-                             ``get_session`` overridden to the test session.
-  * ``authed_client``      — ``app_client`` plus a freshly-inserted User and an
-                             ``Authorization: Bearer <token>`` header.
-  * ``other_authed_client``— a SECOND user + client, for the SEC-01 cross-user
-                             404 test (Plan 05).
-
-Test DB strategy: transaction-per-test rollback. Tables are created once per
-session against ``TEST_DATABASE_URL`` (fallback ``DATABASE_URL``); each test runs
-inside an outer transaction bound to a single connection and is rolled back at
-teardown. This needs a reachable Postgres — when none is available locally the
-DB-touching tests are exercised via ``docker compose exec backend pytest``
-(Plan 08). The module itself imports without a live DB so ``pytest
---collect-only`` always succeeds.
-
-NOTE: these fixtures import cleanly even before the auth/notes routers exist.
-``authed_client`` inserts the User row and mints a token directly (via
-``make_access_token``) rather than calling ``/auth/register`` so notes tests can
-run in isolation regardless of plan order.
-"""
+"""Async backend test harness: transaction-per-test ``db_session`` (rolled back) plus ``app_client``/``authed_client``/``other_authed_client`` fixtures; needs a reachable Postgres but imports/collects without one."""
 
 import os
 import uuid
@@ -58,8 +32,7 @@ async def engine():
 
 @pytest_asyncio.fixture
 async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
-    """Transaction-per-test session: open a connection + outer transaction, bind a
-    session to it, yield, then roll back so no test leaks state into another."""
+    """Transaction-per-test session: bind to an outer transaction, yield, then roll back so no test leaks state."""
     async with engine.connect() as connection:
         trans = await connection.begin()
         session_factory = async_sessionmaker(bind=connection, expire_on_commit=False)
@@ -96,9 +69,7 @@ async def _make_user(db_session: AsyncSession, email: str) -> User:
 async def authed_client(
     app_client: AsyncClient, db_session: AsyncSession
 ) -> AsyncGenerator[tuple[AsyncClient, User], None]:
-    """A client whose requests carry a valid Bearer token for a fresh user.
-
-    Yields ``(client, user)`` so tests can assert ownership (SEC-01)."""
+    """A client carrying a valid Bearer token for a fresh user; yields ``(client, user)`` so tests can assert ownership (SEC-01)."""
     user = await _make_user(db_session, f"user-{uuid.uuid4().hex[:8]}@test.local")
     token = make_access_token(str(user.id))
     app_client.headers["Authorization"] = f"Bearer {token}"
@@ -109,10 +80,7 @@ async def authed_client(
 async def other_authed_client(
     db_session: AsyncSession,
 ) -> AsyncGenerator[tuple[AsyncClient, User], None]:
-    """A SECOND authenticated user + client for cross-user isolation tests (SEC-01).
-
-    Uses its own AsyncClient (separate Authorization header) over the same test
-    session/transaction so both users share one rolled-back DB state."""
+    """A SECOND authenticated user + client (own Authorization header, same test transaction) for cross-user isolation tests (SEC-01)."""
     user = await _make_user(db_session, f"other-{uuid.uuid4().hex[:8]}@test.local")
     token = make_access_token(str(user.id))
 

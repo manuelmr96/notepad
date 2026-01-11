@@ -1,13 +1,4 @@
-"""SEC-01 — the REQUIRED cross-user isolation test.
-
-User A creates a note; user B (a different authenticated user) must get **404**
-on GET, PATCH, and DELETE of A's note (404, not 403, so existence is never
-leaked — T-05-01/T-05-02), and A's data must be unaffected. An unauthenticated
-request gets 401 (T-05-03).
-
-Uses ``authed_client`` (user A) + ``other_authed_client`` (user B), which share
-one rolled-back transaction so both users see the same DB state.
-"""
+"""SEC-01 cross-user isolation: user B gets 404 (not 403) on GET/PATCH/DELETE of A's note (T-05-01/02) and unauthenticated gets 401 (T-05-03)."""
 
 import pytest
 from httpx import ASGITransport, AsyncClient

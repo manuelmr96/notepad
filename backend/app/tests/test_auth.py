@@ -1,22 +1,4 @@
-"""AUTH-01..05 integration tests for the /auth surface.
-
-These run against the Wave-0 ``app_client`` fixture (httpx AsyncClient over
-ASGITransport with the transactional test-session override). They require a
-reachable Postgres; on a host without one they still *collect* cleanly and are
-executed for real under ``docker compose exec backend pytest`` in Plan 08.
-
-Coverage:
-  * register + auto-login + refresh cookie       (AUTH-01, D-10)
-  * duplicate registration -> 409
-  * login with valid creds                        (AUTH-02)
-  * login anti-enumeration: identical generic 401 (AUTH-02, T-04-02)
-  * refresh rotation                              (AUTH-03, T-04-03)
-  * logout revokes the refresh token              (AUTH-04)
-  * logout-all forced revocation                  (AUTH-05)
-  * refresh cookie carries HttpOnly/SameSite=Strict and a Path that the BROWSER
-    will actually send on the public /api/auth/refresh boot path (T-04-04/05,
-    AUTH-03 reload regression)
-"""
+"""AUTH-01..05 integration tests for the /auth surface (register/login/refresh-rotation/logout[-all], anti-enumeration, and refresh-cookie attributes); needs Postgres but collects without one."""
 
 import uuid
 
@@ -30,21 +12,12 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture(autouse=True)
 def _insecure_cookies(monkeypatch):
-    """Force ``COOKIE_SECURE=False`` for the duration of each test.
-
-    The test client talks plain ``http://test`` (ASGITransport), so a ``Secure``
-    cookie would be dropped by httpx's cookie jar and the refresh-flow assertions
-    would fail purely due to the transport — independent of app correctness. We
-    still assert the security attributes (HttpOnly / SameSite=Strict / Path) via
-    the raw Set-Cookie header in ``test_refresh_cookie_attributes``.
-    """
+    """Force ``COOKIE_SECURE=False`` per test so httpx (plain http) keeps the refresh cookie; security attributes are still asserted via the raw Set-Cookie header."""
     monkeypatch.setattr(settings, "COOKIE_SECURE", False)
 
 
 def _unique_email() -> str:
-    # Use example.com (a non-reserved, EmailStr-valid domain). The .local TLD is
-    # rejected by email-validator as a special-use name, and these requests go
-    # through the UserCreate(EmailStr) schema.
+    # Use example.com (EmailStr-valid); the .local TLD is rejected by email-validator as a special-use name.
     return f"auth-{uuid.uuid4().hex[:10]}@example.com"
 
 
@@ -60,9 +33,7 @@ async def _register(client: AsyncClient, email: str, password: str = "password12
     return await client.post("/auth/register", json={"email": email, "password": password})
 
 
-# --------------------------------------------------------------------------- #
 # AUTH-01 / D-10: register auto-logs-in and sets a refresh cookie
-# --------------------------------------------------------------------------- #
 async def test_register(app_client: AsyncClient):
     email = _unique_email()
     resp = await _register(app_client, email)
@@ -83,9 +54,7 @@ async def test_register_duplicate(app_client: AsyncClient):
     assert second.status_code == 409, second.text
 
 
-# --------------------------------------------------------------------------- #
 # AUTH-02: login + anti-enumeration generic error
-# --------------------------------------------------------------------------- #
 async def test_login(app_client: AsyncClient):
     email = _unique_email()
     await _register(app_client, email, "password123")
@@ -118,19 +87,13 @@ async def test_login_bad(app_client: AsyncClient):
     assert bad_pw.json()["detail"] == unknown.json()["detail"]
 
 
-# --------------------------------------------------------------------------- #
 # AUTH-03: silent refresh with rotation
-# --------------------------------------------------------------------------- #
 async def test_refresh(app_client: AsyncClient):
     email = _unique_email()
     reg = await _register(app_client, email)
     old_cookie = reg.cookies["refresh_token"]
 
-    # The cookie is now scoped to COOKIE_PATH (/api/auth), so httpx's jar would
-    # NOT send the auto-stored register cookie on the direct /auth/refresh request
-    # this harness uses (it strips the /api proxy prefix). Re-seed at path="/" so
-    # the cookie rides along — a transport detail; the cookie *scope* the browser
-    # relies on is asserted in test_refresh_cookie_path_covers_public_refresh_path.
+    # Re-seed at path="/" so httpx sends the COOKIE_PATH-scoped cookie on the direct /auth/refresh request (transport detail; scope asserted elsewhere).
     app_client.cookies.set("refresh_token", old_cookie, path="/")
     resp = await app_client.post("/auth/refresh")
     assert resp.status_code == 200, resp.text
@@ -140,9 +103,7 @@ async def test_refresh(app_client: AsyncClient):
     # Rotation: a brand-new refresh value is issued.
     assert new_cookie != old_cookie
 
-    # The OLD refresh token no longer works (it was revoked on rotation).
-    # Re-seed at path="/" so httpx sends it on the direct /auth/refresh request
-    # regardless of the app's configured COOKIE_PATH (transport detail only).
+    # The OLD refresh token no longer works (revoked on rotation); re-seed at path="/" so httpx sends it (transport detail).
     app_client.cookies.set("refresh_token", old_cookie, path="/")
     replay = await app_client.post("/auth/refresh")
     assert replay.status_code == 401
@@ -170,22 +131,7 @@ async def test_refresh_cookie_attributes(app_client: AsyncClient):
 
 
 async def test_refresh_cookie_path_covers_public_refresh_path(app_client: AsyncClient):
-    """REGRESSION (AUTH-03 reload logout): the refresh cookie's Path MUST be a
-    prefix of the public, browser-visible refresh path.
-
-    The browser reaches the API same-origin through the `/api` proxy mount (Vite
-    dev proxy + nginx), so on app boot ``bootstrapAuth()`` issues
-    ``POST /api/auth/refresh``. Per RFC 6265 path-matching, the browser only sends
-    the cookie when the request path is *under* the cookie's Path. A cookie scoped
-    to the bare ``/auth`` therefore is NEVER sent on ``/api/auth/refresh`` and the
-    user gets logged out on every reload.
-
-    Why the other refresh tests don't catch this: ``app_client`` (httpx
-    ASGITransport) hits the app directly at ``/auth/refresh`` with no ``/api``
-    prefix, so httpx's cookie jar matches ``Path=/auth`` against ``/auth/refresh``
-    and the cookie rides along — the harness never exercises the ``/api`` mount the
-    browser actually uses. This test asserts the *scope* instead of the transport.
-    """
+    """REGRESSION (AUTH-03 reload logout): the refresh cookie's Path MUST prefix the public /api/auth/refresh path (RFC 6265) so the browser sends it; asserts scope, not transport."""
     public_refresh_path = "/api/auth/refresh"
 
     # Configured scope must itself be a path-boundary prefix of the public path.
@@ -196,8 +142,7 @@ async def test_refresh_cookie_path_covers_public_refresh_path(app_client: AsyncC
         f"{public_refresh_path!r}"
     )
 
-    # And the actual Set-Cookie header on register must use that scope. This is
-    # what fails loudly if someone reverts path back to "/auth".
+    # And the actual Set-Cookie header on register must use that scope (fails loudly if path reverts to "/auth").
     reg = await _register(app_client, _unique_email())
     cookie_path = _cookie_path(_set_cookie_header(reg))
     assert cookie_path == settings.COOKIE_PATH, (
@@ -209,19 +154,14 @@ async def test_refresh_cookie_path_covers_public_refresh_path(app_client: AsyncC
     assert public_refresh_path.startswith(cookie_path)
 
 
-# --------------------------------------------------------------------------- #
 # AUTH-04 / AUTH-05: logout + logout-all revoke via the denylist
-# --------------------------------------------------------------------------- #
 async def test_logout_revokes(app_client: AsyncClient):
     email = _unique_email()
     reg = await _register(app_client, email)
     token = reg.json()["access_token"]
     cookie = reg.cookies["refresh_token"]
 
-    # Re-seed at path="/" so httpx sends the cookie on the direct /auth/logout
-    # request (the register cookie is scoped to COOKIE_PATH=/api/auth, which this
-    # direct-to-app harness does not path-match). Logout must SEE the cookie to
-    # revoke it.
+    # Re-seed at path="/" so httpx sends the COOKIE_PATH-scoped cookie on the direct /auth/logout request (logout must see it to revoke).
     app_client.cookies.set("refresh_token", cookie, path="/")
     logout = await app_client.post("/auth/logout", headers={"Authorization": f"Bearer {token}"})
     assert logout.status_code == 204, logout.text

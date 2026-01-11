@@ -1,10 +1,4 @@
-"""Schema smoke test: proves the ORM + test harness work before auth/notes land.
-
-Inserts a User + a Page, reads the Page back, and asserts the locked defaults
-(``content`` empty doc JSON, ``content_schema_version == 1``). Requires a
-reachable Postgres; under ``docker compose exec backend pytest`` (Plan 08) or a
-local test DB it runs for real. ``pytest --collect-only`` succeeds without a DB.
-"""
+"""Schema smoke test: inserts a User + Page and asserts the locked defaults (empty doc JSON, content_schema_version == 1); needs Postgres but collects without one."""
 
 import uuid
 

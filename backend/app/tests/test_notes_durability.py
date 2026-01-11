@@ -1,23 +1,4 @@
-"""Regression test for the create-without-commit bug (Phase 01 checkpoint).
-
-THE BUG: ``NoteRepository.create`` flushed but never committed. In production
-every request gets a fresh, non-committing session from ``get_session`` — so a
-``POST /notes`` returned 201 (flush assigns the id) but the row was rolled back
-when the request session closed. Every subsequent ``GET``/``PATCH`` then 404'd.
-
-WHY A SAME-SESSION ASSERTION IS INSUFFICIENT: the shared ``db_session`` harness
-binds the route handler and the test to ONE connection/transaction. Within a
-single transaction ``flush()`` already makes rows visible, so reading the note
-back through the same session passes whether or not ``create`` commits — it
-cannot distinguish flush from commit. To catch this class of bug we MUST read
-back through an INDEPENDENT session on the real engine (a true session
-boundary). That independent session sees the row only if ``create`` actually
-committed to the database — exactly the production failure mode.
-
-This test creates a real-engine session/user (not the rolled-back ``db_session``
-harness), drives the production ``get_session`` (no override), and cleans up the
-committed rows in a ``finally`` so it leaves no state behind.
-"""
+"""Regression test for the create-without-commit bug: reads back through an INDEPENDENT real-engine session (a true session boundary) since a same-session flush can't be distinguished from a commit."""
 
 import uuid
 
@@ -33,12 +14,7 @@ from app.models import Page, User
 
 @pytest.mark.asyncio
 async def test_create_is_durable_across_session_boundary(engine) -> None:
-    """POST /notes must persist so an INDEPENDENT session sees the row.
-
-    Fails (404 / row absent) if ``create`` only flushes; passes once it commits.
-    Uses the real ``SessionLocal`` engine and the un-overridden production
-    ``get_session`` so it exercises the true per-request session lifecycle.
-    """
+    """POST /notes must persist so an INDEPENDENT session sees the row (fails if ``create`` only flushes); uses the real engine and un-overridden ``get_session``."""
     # A committed user on the real engine (the production session must find it).
     email = f"durable-{uuid.uuid4().hex[:8]}@test.local"
     async with SessionLocal() as setup:
@@ -51,8 +27,7 @@ async def test_create_is_durable_across_session_boundary(engine) -> None:
     token = make_access_token(str(user_id))
     note_id: str | None = None
     try:
-        # NO get_session override here: the route uses a real, fresh per-request
-        # session, just like production.
+        # NO get_session override here: the route uses a real, fresh per-request session like production.
         transport = ASGITransport(app=app)
         async with AsyncClient(
             transport=transport,

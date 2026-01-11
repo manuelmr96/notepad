@@ -1,10 +1,4 @@
-"""NOTE-01..05 owner-lifecycle tests for the /notes API.
-
-Covers create + list, open + partial edit (autosave), most-recently-updated
-sort, and soft-delete (D-13: the row remains with ``deleted_at`` set, filtered
-from all reads). Uses the ``authed_client`` fixture (a single owner). Requires a
-reachable Postgres; collects without one.
-"""
+"""NOTE-01..05 owner-lifecycle tests for the /notes API (create/list, open/partial-edit, sort, soft-delete D-13); needs Postgres but collects without one."""
 
 import uuid
 
@@ -110,8 +104,7 @@ async def test_list_sort(authed_client: tuple[AsyncClient, User]) -> None:
 async def test_soft_delete(
     authed_client: tuple[AsyncClient, User], db_session: AsyncSession
 ) -> None:
-    """NOTE-05/D-13: DELETE -> 204; note then 404 on GET and absent from list; the DB
-    row STILL EXISTS with ``deleted_at`` set (soft, not hard, delete)."""
+    """NOTE-05/D-13: DELETE -> 204, then 404/absent from reads, but the DB row STILL EXISTS with ``deleted_at`` set (soft delete)."""
     client, _user = authed_client
     created = (await client.post("/notes", json={"title": "Doomed"})).json()
     note_id = created["id"]
