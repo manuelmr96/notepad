@@ -29,10 +29,7 @@ class NoteRead(BaseModel):
 
 
 class NoteUpdate(BaseModel):
-    """Partial update (NOTE-04). All fields optional => idempotent PATCH for autosave.
-
-    Use ``model_dump(exclude_unset=True)`` so an empty patch is a no-op.
-    """
+    """Partial update (NOTE-04); all fields optional => idempotent autosave PATCH (empty patch is a no-op via exclude_unset)."""
 
     title: str | None = None
     content: dict | None = None

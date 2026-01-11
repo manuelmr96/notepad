@@ -1,13 +1,4 @@
-"""initial schema: users, pages, refresh_tokens
-
-Hand-authored (no live DB was reachable during scaffolding to autogenerate).
-Mirrors the SQLAlchemy 2.0 ORM in app/models exactly. The `pages` table is the
-LOCKED forward-compatible schema (all Phase 5 columns present; parent_id dormant).
-
-Revision ID: 0001
-Revises:
-Create Date: 2026-06-20
-"""
+"""initial schema (rev 0001): users, pages, refresh_tokens; hand-authored, mirrors the app/models ORM; pages is the LOCKED forward-compatible schema."""
 
 from collections.abc import Sequence
 
@@ -24,8 +15,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # pgcrypto provides gen_random_uuid(). Builtin on PG13+, but the extension
-    # call is idempotent and harmless and guards older/minimal images.
+    # pgcrypto provides gen_random_uuid(); idempotent call guards older/minimal images.
     op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
 
     op.create_table(
