@@ -11,9 +11,7 @@ const queryClient = new QueryClient();
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      {/* AuthGate runs the boot-time silent /auth/refresh (AUTH-03) and blocks
-          rendering on a spinner until it resolves, so the router's redirect
-          decisions see a settled session. */}
+      {/* AuthGate runs the boot-time silent /auth/refresh (AUTH-03), blocking on a spinner until it resolves so the router's redirect decisions see a settled session. */}
       <AuthGate>
         <RouterProvider router={router} />
       </AuthGate>

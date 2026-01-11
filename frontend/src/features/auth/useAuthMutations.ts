@@ -4,21 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/stores/auth";
 import type { LoginValues, RegisterValues } from "./schema";
 
-/**
- * Auth mutations wiring the Plan 02 api wrapper to the Plan 04 endpoints.
- *
- * - useLogin    -> POST /auth/login    (401 -> form-level "Incorrect email or password.")
- * - useRegister -> POST /auth/register (409 -> "An account with this email already exists.")
- * - useLogout   -> POST /auth/logout, then clear in-memory token + redirect (AUTH-04, T-06-04)
- *
- * On success login/register store the access token (auto-login on register, D-10)
- * and the caller navigates to "/". Non-2xx responses are mapped to a typed
- * `AuthError` whose `message` is the exact UI-SPEC copy for form-level display.
- *
- * Security (T-06-01): the token is only ever passed to the in-memory store —
- * never written to any browser storage here.
- * Security (T-06-02): login surfaces the single generic credential error.
- */
+// Auth mutations (Plan 04): useLogin/useRegister store the access token (auto-login on register, D-10), useLogout clears + redirects (AUTH-04, T-06-04). Errors map to a typed AuthError with exact UI-SPEC copy. Token is memory-only (T-06-01); login uses the single generic credential error (T-06-02).
 
 const LOGIN_FAILED = "Incorrect email or password.";
 const EMAIL_EXISTS = "An account with this email already exists. Log in instead.";
@@ -90,11 +76,7 @@ export function useRegister() {
   });
 }
 
-/**
- * Logout (AUTH-04, T-06-04): revoke the refresh token server-side, then clear the
- * in-memory access token and return to /login. The store is cleared even if the
- * network call fails so the client never shows a stale session.
- */
+// Logout (AUTH-04, T-06-04): revoke the refresh token server-side, then clear the in-memory token and return to /login (cleared even on network failure so no stale session shows).
 export function useLogout() {
   const navigate = useNavigate();
   return useMutation<void, Error, void>({

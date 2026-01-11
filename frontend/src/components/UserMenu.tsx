@@ -15,11 +15,7 @@ import {
 import { useAuth } from "@/stores/auth";
 import { useLogout } from "@/features/auth/useAuthMutations";
 
-/**
- * Sidebar-footer user menu (D-04, AUTH-04): shows the signed-in identity and a
- * Log out action. The email is captured at login (auth store); after a silent
- * boot refresh it may be absent, so we fall back to a neutral "Account" label.
- */
+// Sidebar-footer user menu (D-04, AUTH-04): shows the signed-in identity (falls back to "Account" when email is absent after a boot refresh) and a Log out action.
 export function UserMenu() {
   const email = useAuth((s) => s.email);
   const logout = useLogout();

@@ -11,19 +11,7 @@ import { NoteList } from "@/features/notes/NoteList";
 import { UserMenu } from "@/components/UserMenu";
 import { useUI } from "@/stores/ui";
 
-/**
- * Two-pane notes shell (D-01): a collapsible left sidebar (note list + footer
- * user menu) and the routed editor pane on the right.
- *
- * Responsive (D-02/D-03, PLAT-04):
- * - Desktop: a 280px sidebar, always visible, collapsible to an icon rail via the
- *   trigger (wired to the shared UI store so the collapse state is app-global).
- * - ≤sm: shadcn renders the sidebar as a Sheet slide-over drawer behind the
- *   hamburger trigger; selecting a note closes the drawer (NoteList) so an open
- *   note shows full-screen.
- *
- * The collapse/hamburger triggers carry aria-labels for a11y.
- */
+// Two-pane notes shell (D-01/D-02/D-03, PLAT-04): collapsible sidebar (note list + user menu) wired to the shared UI store, Sheet drawer ≤sm, routed editor pane on the right.
 export function AppShell() {
   const collapsed = useUI((s) => s.sidebarCollapsed);
   const setCollapsed = useUI((s) => s.setSidebarCollapsed);

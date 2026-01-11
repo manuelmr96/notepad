@@ -14,14 +14,7 @@ import { Button } from "@/components/ui/button";
 import { registerSchema, type RegisterValues } from "./schema";
 import { useRegister } from "./useAuthMutations";
 
-/**
- * Register screen (AUTH-01, D-09/D-10/D-12).
- *
- * RHF + zodResolver inline validation with the exact UI-SPEC messages. On a 409
- * a form-level destructive message offers a link to log in instead. On success
- * the user is auto-logged-in (token stored in useRegister, D-10) and navigated
- * to the protected app root. Cross-links to /login (D-09).
- */
+// Register screen (AUTH-01, D-09/D-10/D-12): RHF+zod inline validation; 409 offers a link to log in; on success auto-logs-in (token stored in useRegister, D-10) and navigates to the app root.
 export default function RegisterPage() {
   const navigate = useNavigate();
   const register = useRegister();

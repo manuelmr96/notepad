@@ -14,15 +14,7 @@ import { Button } from "@/components/ui/button";
 import { loginSchema, type LoginValues } from "./schema";
 import { useLogin } from "./useAuthMutations";
 
-/**
- * Login screen (AUTH-02, D-09/D-11/D-12).
- *
- * RHF + zodResolver drive inline per-field validation with the exact UI-SPEC
- * messages. A form-level destructive region above the submit shows the generic
- * "Incorrect email or password." on a 401 (T-06-02 — single generic credential
- * error, no user enumeration). On success the token is stored (in useLogin) and
- * we navigate to the protected app root. Cross-links to /register (D-09).
- */
+// Login screen (AUTH-02, D-09/D-11/D-12): RHF+zod inline validation; 401 shows the single generic "Incorrect email or password." (T-06-02); on success stores the token and navigates to the app root.
 export default function LoginPage() {
   const navigate = useNavigate();
   const login = useLogin();

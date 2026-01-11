@@ -1,22 +1,6 @@
 import { useAuth } from "@/stores/auth";
 
-/**
- * Thin fetch wrapper for the Notepad API.
- *
- * Contract (consumed by Plans 05/06):
- *   apiFetch(path, init?)  -> Promise<Response>
- *   bootstrapAuth()        -> Promise<void>
- *
- * Behaviour:
- * - Prefixes every request with `/api` (same-origin via the Vite dev proxy in
- *   dev and the nginx reverse proxy in prod — no CORS, refresh cookie rides along).
- * - Attaches the in-memory access token as `Authorization: Bearer <token>`.
- * - Sends `credentials: "include"` on EVERY call so the httpOnly refresh cookie is
- *   transmitted (Pitfall 3).
- * - On a 401 for a non-auth route, performs ONE silent refresh via /auth/refresh
- *   (Pattern 5). On success it stores the new token and retries the original
- *   request once; on failure it clears the session.
- */
+// Thin fetch wrapper for the Notepad API: prefixes /api (same-origin, no CORS), attaches the in-memory Bearer token, sends credentials:include for the refresh cookie (Pitfall 3), and on a 401 for a non-auth route does ONE silent /auth/refresh + retry, else clears the session (Pattern 5).
 
 const API_PREFIX = "/api";
 
@@ -72,10 +56,7 @@ export async function apiFetch(
   return res;
 }
 
-/**
- * Called once on app boot to restore the session from the refresh cookie (AUTH-03).
- * Always flips `bootstrapped` true so the UI can stop blocking on the initial check.
- */
+// Called once on app boot to restore the session from the refresh cookie (AUTH-03); always flips `bootstrapped` true so the UI stops blocking on the initial check.
 export async function bootstrapAuth(): Promise<void> {
   try {
     const res = await fetch(`${API_PREFIX}/auth/refresh`, {

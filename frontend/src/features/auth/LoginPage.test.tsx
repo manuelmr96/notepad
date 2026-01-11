@@ -11,12 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LoginPage from "./LoginPage";
 import { useAuth } from "@/stores/auth";
 
-/**
- * LoginPage coverage (Task 3): inline validation (invalid email, short
- * password), the form-level invalid-credentials error on a 401, and the
- * token-set success path. `fetch` is mocked so no network is hit; assertions on
- * the auth store confirm the success path stores the access token.
- */
+// LoginPage coverage (Task 3): inline validation, the 401 invalid-credentials error, and the token-set success path. fetch is mocked; assertions on the auth store confirm the token is stored.
 
 function renderLoginPage() {
   const queryClient = new QueryClient({
