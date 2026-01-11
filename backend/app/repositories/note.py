@@ -1,16 +1,4 @@
-"""Per-user-isolated note (Page) persistence — the SEC-01 security boundary.
-
-The isolation guarantee lives HERE, not in the router or UI: EVERY method takes
-``user_id`` and includes ``Page.owner_id == user_id`` (plus
-``Page.deleted_at IS NULL``) in its WHERE clause. There is intentionally no
-method that touches a page without scoping by owner — an attacker-controlled
-``note_id`` can never reach another user's row (T-05-01). The router translates a
-``None``/``False`` miss into a 404 (never 403) so existence is not leaked
-(T-05-02).
-
-Delete is SOFT (D-13 / T-05-05): ``deleted_at`` is set and every query filters
-``deleted_at IS NULL`` — the row remains for Phase 2 trash/restore.
-"""
+"""Per-user-isolated note (Page) persistence — the SEC-01 boundary: every method scopes by ``owner_id`` + ``deleted_at IS NULL`` (T-05-01/02), and delete is soft (D-13)."""
 
 import uuid
 from collections.abc import Sequence
@@ -55,22 +43,13 @@ class NoteRepository:
             content_schema_version=1,
         )
         self.session.add(page)
-        # MUST commit (not just flush): each HTTP request gets a fresh session
-        # from ``get_session`` that does NOT commit after yield, so a flush-only
-        # create is rolled back when the request session closes — the row never
-        # persists and every later GET/PATCH 404s. Mirrors ``update`` below.
+        # MUST commit (not just flush): the per-request session never commits after yield, so a flush-only create is rolled back and the row never persists.
         await self.session.commit()
         await self.session.refresh(page)
         return page
 
     async def update(self, user_id: uuid.UUID, note_id: uuid.UUID, data: NoteUpdate) -> Page | None:
-        """Partial, idempotent update for autosave (NOTE-04/06).
-
-        Only fields explicitly set on the payload are applied
-        (``model_dump(exclude_unset=True)``), so an empty PATCH is a no-op. The
-        target row is fetched via ``get`` (owner-scoped), so a missing/cross-user
-        note returns ``None`` => router 404. ``updated_at`` auto-bumps via the
-        model's ``onupdate`` (Plan 03)."""
+        """Partial, idempotent autosave update (NOTE-04/06): applies only set fields, owner-scoped (missing/cross-user => None => 404), updated_at auto-bumps."""
         result = await self.session.execute(
             select(Page).where(
                 Page.id == note_id,
@@ -89,11 +68,7 @@ class NoteRepository:
         return page
 
     async def soft_delete(self, user_id: uuid.UUID, note_id: uuid.UUID) -> bool:
-        """Soft-delete an owned note (D-13): set ``deleted_at`` (row remains).
-
-        Returns ``True`` iff exactly one owned, not-already-deleted row matched
-        (``False`` => router 404). The owner filter is in the WHERE clause so a
-        cross-user delete touches nothing (T-05-01)."""
+        """Soft-delete an owned note (D-13): set ``deleted_at``; returns True iff one owned, not-already-deleted row matched (cross-user touches nothing, T-05-01)."""
         result = await self.session.execute(
             update(Page)
             .where(

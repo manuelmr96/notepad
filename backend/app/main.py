@@ -7,20 +7,14 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
 from app.state import limiter
 
-# slowapi limiter lives in app.state module; routers import it from there. It is
-# also registered on app.state below so slowapi's middleware/handlers find it.
+# slowapi limiter lives in app.state; registered here so its middleware/handlers find it.
 app = FastAPI(title="Notepad API")
 app.state.limiter = limiter
-# Register slowapi's 429 handler + middleware so @limiter.limit decorators
-# actually return HTTP 429 (rather than raising 500) when a limit is exceeded
-# (T-04-01: /login brute-force throttle).
+# Register slowapi 429 handler + middleware so @limiter.limit returns HTTP 429 (T-04-01 /login throttle).
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# Conditional CORS (Open Question 1 resolution):
-#   - Prod default is SAME-ORIGIN behind a reverse proxy => CORS_ORIGINS empty => no middleware.
-#   - Split-domain deploys set CORS_ORIGINS to explicit origins; never "*" with credentials,
-#     because the refresh cookie requires allow_credentials=True.
+# Conditional CORS: empty => same-origin (no middleware); split-domain sets explicit origins, never "*" (refresh cookie needs allow_credentials).
 if settings.CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
@@ -36,8 +30,7 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
-# Routers (imported after `app` is defined; routers import `limiter` from
-# app.state, so there is no circular import with this module).
+# Routers imported after `app` is defined; they import `limiter` from app.state to avoid a circular import.
 from app.routers import auth, notes  # noqa: E402
 
 app.include_router(auth.router)

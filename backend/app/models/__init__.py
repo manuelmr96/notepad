@@ -1,8 +1,4 @@
-"""ORM models package.
-
-Re-exports ``Base`` plus every model so that importing this package registers
-all tables on ``Base.metadata`` (Alembic's ``target_metadata`` depends on this).
-"""
+"""ORM models package: re-exports ``Base`` + every model so importing it registers all tables on ``Base.metadata`` (Alembic target_metadata)."""
 
 from app.core.db import Base
 from app.models.page import Page

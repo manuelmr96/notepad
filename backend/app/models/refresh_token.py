@@ -9,11 +9,7 @@ from app.core.db import Base
 
 
 class RefreshToken(Base):
-    """Refresh-token denylist/whitelist row for forced revocation (AUTH-05).
-
-    Only a HASH of the raw token is stored (T-03-02 mitigation) — the raw token
-    lives solely in the client's httpOnly cookie and is never persisted.
-    """
+    """Refresh-token denylist row for forced revocation (AUTH-05); stores only the token HASH, never the raw token (T-03-02)."""
 
     __tablename__ = "refresh_tokens"
 

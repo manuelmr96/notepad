@@ -1,11 +1,4 @@
-"""Shared FastAPI dependencies.
-
-``get_current_user`` decodes and validates the Bearer access token (signature,
-expiry, and ``type == "access"``) and resolves it to a ``User`` row. It is the
-single auth gate consumed by every protected route (e.g. the notes router in
-Plan 05). All failure modes return a generic 401 so an attacker cannot
-distinguish "no token" / "bad token" / "unknown user" (T-04-06).
-"""
+"""Shared FastAPI deps: ``get_current_user`` validates the Bearer access token and resolves the ``User``, returning a generic 401 on any failure (T-04-06)."""
 
 import uuid
 
@@ -19,8 +12,7 @@ from app.core.security import decode_access_token
 from app.models import User
 from app.repositories import UserRepository
 
-# auto_error=False so we can return our own generic 401 (rather than FastAPI's
-# default 403) when no credentials are supplied.
+# auto_error=False so we return our own generic 401 (not FastAPI's default 403) when no credentials are supplied.
 _bearer = HTTPBearer(auto_error=False)
 
 

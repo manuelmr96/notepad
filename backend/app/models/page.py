@@ -14,17 +14,7 @@ def _default_content() -> dict:
 
 
 class Page(Base):
-    """The LOCKED forward-compatible note/page schema.
-
-    Designed ONCE with every column it needs through Phase 5 so later phases
-    extend additively rather than reshape (STATE.md locked decision):
-      - ``parent_id`` is DORMANT until Phase 4 (self-referential nesting).
-      - ``content`` holds editor-native JSON (Phase 2 markdown / Phase 5 blocks
-        are content-format upgrades gated by ``content_schema_version``, never
-        schema migrations).
-      - ``sort_key`` is reserved for Phase 4 sibling ordering.
-      - ``deleted_at`` powers soft-delete (D-13).
-    """
+    """LOCKED forward-compatible page schema with all Phase 5 columns present (parent_id/sort_key dormant, content JSON, deleted_at soft-delete D-13) so later phases extend additively."""
 
     __tablename__ = "pages"
 

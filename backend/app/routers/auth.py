@@ -1,25 +1,4 @@
-"""Email/password auth surface (AUTH-01..05).
-
-Token model (per CLAUDE.md / 01-RESEARCH Pattern 4):
-  * Access token: short-lived JWT (~15 min), returned in the JSON body only and
-    held in client memory — never in a cookie (T-04-04).
-  * Refresh token: high-entropy random value in an httpOnly / Secure /
-    SameSite=Strict cookie scoped to ``settings.COOKIE_PATH`` (default
-    ``/api/auth`` — must be a prefix of the public, proxy-mounted refresh path
-    ``/api/auth/refresh`` so the browser actually sends it; see config.py). Only
-    its sha256 hash is stored in the Postgres ``refresh_tokens`` denylist
-    (T-04-07); validity is the denylist, not the cookie alone.
-
-Security controls:
-  * /login is rate-limited (slowapi, T-04-01) and returns an identical generic
-    401 for both bad-password and unknown-email, with dummy-hash timing
-    equalization (T-04-02).
-  * /refresh ROTATES: the presented token is revoked and a new one issued; a
-    revoked/replayed token returns 401 (T-04-03). Reuse-detection family-revoke
-    is a documented stretch (Open Question 2).
-  * /logout revokes the current refresh token; /logout-all revokes every active
-    session for the user (AUTH-05 forced revocation).
-"""
+"""Email/password auth surface (AUTH-01..05): in-memory access JWT + httpOnly/Secure/SameSite=Strict refresh cookie (only its hash stored, T-04-07), rate-limited anti-enumeration /login (T-04-01/02), rotating /refresh (T-04-03), and /logout[-all] revocation (AUTH-05)."""
 
 import datetime
 
@@ -43,8 +22,7 @@ from app.state import limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# A fixed, valid Argon2 hash used to equalize verify timing when the looked-up
-# user does not exist, so unknown-email and bad-password cost the same (T-04-02).
+# Fixed valid Argon2 hash to equalize verify timing for unknown users so unknown-email and bad-password cost the same (T-04-02).
 _DUMMY_HASH = hash_password("dummy-password-for-timing-equalization")
 
 
@@ -66,8 +44,7 @@ async def _issue_tokens(
     """Mint an access token + a fresh refresh token, persisting only its hash."""
     access_token = make_access_token(str(user.id))
     raw = new_refresh_token()
-    # Naive UTC to match the TIMESTAMP WITHOUT TIME ZONE expires_at column
-    # (Plan 03 locked schema); asyncpg rejects tz-aware values for naive columns.
+    # Naive UTC to match the TIMESTAMP WITHOUT TIME ZONE expires_at column; asyncpg rejects tz-aware values for naive columns.
     expires_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None) + datetime.timedelta(
         days=settings.REFRESH_TOKEN_TTL_DAYS
     )
@@ -104,8 +81,7 @@ async def login(
 ) -> TokenResponse:
     users = UserRepository(session)
     user = await users.get_by_email(payload.email)
-    # Always run a hash verify (against the real or a dummy hash) so missing-user
-    # and bad-password take equal time (anti-enumeration, T-04-02).
+    # Always run a hash verify (real or dummy hash) so missing-user and bad-password take equal time (anti-enumeration, T-04-02).
     target_hash = user.hashed_password if user is not None else _DUMMY_HASH
     valid = verify_password(payload.password, target_hash)
     if user is None or not valid:

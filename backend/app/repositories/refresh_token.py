@@ -1,10 +1,4 @@
-"""Refresh-token denylist operations (rotation + per-token + forced revocation).
-
-Only token HASHES are ever stored or compared (T-04-07); the raw token lives
-solely in the client's httpOnly cookie. A token is "active" iff it exists, has
-not been revoked, and has not expired — this is the source of truth for refresh
-validity, not the cookie alone (the cookie↔denylist trust boundary).
-"""
+"""Refresh-token denylist ops (rotation + per-token + forced revocation): only HASHES are stored/compared (T-04-07); a token is active iff it exists, is unrevoked, and unexpired."""
 
 import datetime
 import uuid
@@ -16,10 +10,7 @@ from app.models import RefreshToken
 
 
 def _now() -> datetime.datetime:
-    # NAIVE UTC: the refresh_tokens.expires_at / revoked_at columns are
-    # TIMESTAMP WITHOUT TIME ZONE (Plan 03 locked schema, matching `now()`
-    # server defaults). asyncpg refuses to bind a tz-aware datetime to a naive
-    # column, so all comparisons/writes here use naive UTC.
+    # NAIVE UTC: expires_at/revoked_at are TIMESTAMP WITHOUT TIME ZONE; asyncpg rejects tz-aware values for naive columns.
     return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
 
@@ -64,10 +55,7 @@ class RefreshTokenRepository:
         await self.session.flush()
 
     async def revoke_all(self, user_id: uuid.UUID) -> int:
-        """Forced revocation of every active session for a user (AUTH-05).
-
-        Returns the number of tokens revoked.
-        """
+        """Forced revocation of every active session for a user (AUTH-05); returns the count revoked."""
         result = await self.session.execute(
             update(RefreshToken)
             .where(

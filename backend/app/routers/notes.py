@@ -1,12 +1,4 @@
-"""Per-user-isolated note CRUD API (NOTE-01..05 + SEC-01).
-
-Every handler is behind ``get_current_user`` (Plan 04 auth gate) and passes the
-authenticated caller's ``current_user.id`` into the ``NoteRepository`` — the
-repository is where the owner filter actually lives (SEC-01). A missing OR
-cross-user note returns **404, never 403**, so the API never reveals that another
-user's note exists (T-05-02). Delete is soft (D-13): the row is preserved with
-``deleted_at`` set and filtered from every read.
-"""
+"""Per-user-isolated note CRUD API (NOTE-01..05 + SEC-01): every handler is behind ``get_current_user`` and owner-scopes via the repository; missing/cross-user => 404 not 403 (T-05-02); delete is soft (D-13)."""
 
 import uuid
 

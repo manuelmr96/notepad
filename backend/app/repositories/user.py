@@ -1,9 +1,4 @@
-"""User persistence operations.
-
-Emails are normalized to lowercase on read and write so that lookups are
-case-insensitive and the unique index on ``users.email`` cannot be bypassed by
-casing (AUTH-01).
-"""
+"""User persistence: emails normalized to lowercase on read/write so lookups are case-insensitive and the unique index can't be bypassed by casing (AUTH-01)."""
 
 import uuid
 

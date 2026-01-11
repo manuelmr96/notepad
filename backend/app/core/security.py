@@ -34,19 +34,10 @@ def decode_access_token(token: str) -> dict:
 
 
 def new_refresh_token() -> str:
-    """Generate a fresh, high-entropy raw refresh token.
-
-    The raw value is returned ONLY to be set in the httpOnly cookie; it is never
-    persisted. The server stores ``hash_refresh_token(raw)`` instead (T-04-07).
-    """
+    """Generate a high-entropy raw refresh token (returned only for the cookie; server stores its hash, T-04-07)."""
     return secrets.token_urlsafe(48)
 
 
 def hash_refresh_token(raw: str) -> str:
-    """Hash a raw refresh token for storage/lookup (sha256 -> 64 hex chars).
-
-    SHA-256 (not Argon2) is intentional: the token is already high-entropy random,
-    so a fast deterministic hash gives constant-time-friendly equality lookups in
-    the denylist without the cost of a password KDF.
-    """
+    """Hash a raw refresh token (sha256); fast deterministic hash is fine since the token is already high-entropy."""
     return hashlib.sha256(raw.encode()).hexdigest()

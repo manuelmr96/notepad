@@ -10,12 +10,10 @@ class Base(DeclarativeBase):
     """Single declarative base shared by ORM models and Alembic metadata."""
 
 
-# `pool_pre_ping` recycles dead connections; the async engine + asyncpg keeps
-# the API non-blocking and stateless (any pod can serve any request).
+# `pool_pre_ping` recycles dead connections; async engine + asyncpg keeps the API non-blocking/stateless.
 engine = create_async_engine(settings.DATABASE_URL, pool_pre_ping=True)
 
-# `expire_on_commit=False` prevents lazy reloads after commit (avoids the
-# MissingGreenlet error when serializing ORM objects outside an async context).
+# `expire_on_commit=False` prevents post-commit lazy reloads (avoids MissingGreenlet when serializing ORM objects).
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
 
 
