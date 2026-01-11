@@ -39,12 +39,7 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-/**
- * Sidebar note list (NOTE-02): a New-note button (D-05), rows with title +
- * relative updated time and a per-row "⋯" delete menu (D-15), skeleton loading,
- * and the exact empty-state copy. Selecting a row routes to /notes/:id and
- * closes the mobile drawer.
- */
+// Sidebar note list (NOTE-02): New-note button (D-05), rows with title + relative updated time and a per-row delete menu (D-15), skeleton loading, exact empty-state copy; selecting a row routes to /notes/:id and closes the mobile drawer.
 export function NoteList() {
   const navigate = useNavigate();
   const { id: activeId } = useParams();

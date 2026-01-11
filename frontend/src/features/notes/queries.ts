@@ -5,17 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
-/**
- * TanStack Query layer for the /notes API (Plan 05 contract).
- *
- * Query keys:
- *   ["notes"]        -> the note list (sorted updated_at DESC by the server)
- *   ["notes", id]    -> a single note
- *
- * All server state lives here (never in Zustand). Mutations invalidate the
- * relevant keys so the sidebar + editor stay in sync. The autosave PATCH lives
- * in useAutosave.ts (optimistic), not here.
- */
+// TanStack Query layer for the /notes API (Plan 05): keys ["notes"] (list) and ["notes", id]; all server state lives here, mutations invalidate to keep sidebar+editor in sync; the optimistic autosave PATCH lives in useAutosave.ts.
 
 /** Phase-1 editor-native content document stored in `content JSONB` (D-06, CONTEXT.md). */
 export interface NoteContent {
@@ -79,10 +69,7 @@ export function useNote(id: string | undefined) {
   });
 }
 
-/**
- * Create a note (NOTE-01, D-05 frictionless new-note). Invalidates the list on
- * success and returns the created note so the caller can navigate + focus.
- */
+// Create a note (NOTE-01, D-05 frictionless new-note): invalidates the list on success and returns the created note so the caller can navigate + focus.
 export function useCreateNote() {
   const qc = useQueryClient();
   return useMutation({
@@ -94,8 +81,7 @@ export function useCreateNote() {
       return readJson<Note>(res);
     },
     onSuccess: (note) => {
-      // Seed the single-note cache so the editor renders instantly, then refresh
-      // the list so the new row appears at the top.
+      // Seed the single-note cache so the editor renders instantly, then refresh the list so the new row appears at the top.
       qc.setQueryData(noteKey(note.id), note);
       void qc.invalidateQueries({ queryKey: notesKey });
     },

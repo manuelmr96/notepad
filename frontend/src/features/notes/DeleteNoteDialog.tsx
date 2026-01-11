@@ -10,16 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useDeleteNote } from "./queries";
 
-/**
- * Shared soft-delete confirmation dialog (D-14/D-15/D-16).
- *
- * Used by BOTH the sidebar row "⋯" menu (NoteList) and the editor header menu.
- * Controlled via `open`/`onOpenChange`. On confirm it soft-deletes the note and,
- * when the deleted note is the one currently open, routes back to the index empty
- * state ("Select or create a note", D-16).
- *
- * Copy is the EXACT UI-SPEC contract — do not reword.
- */
+// Shared soft-delete confirmation dialog (D-14/D-15/D-16): used by both the sidebar row menu and the editor header; on confirm soft-deletes and, when the open note is deleted, routes to the empty state. Copy is the EXACT UI-SPEC contract.
 interface DeleteNoteDialogProps {
   noteId: string | null;
   open: boolean;

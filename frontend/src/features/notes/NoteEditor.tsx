@@ -12,12 +12,7 @@ import { useNote, type NoteContent } from "./queries";
 import { useAutosave } from "./useAutosave";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 
-/**
- * Phase-1 content JSON contract (CONTEXT.md / D-06): the body is plain text
- * wrapped as an editor-native ProseMirror-style doc and persisted in
- * `content JSONB` (content_schema_version=1, set server-side). NOT raw markdown
- * TEXT — Phase 2/5 upgrades the schema version, not the column type.
- */
+// Phase-1 content JSON contract (CONTEXT.md / D-06): body is plain text wrapped as a ProseMirror-style doc in `content JSONB` (schema v1); Phase 2/5 upgrades the schema version, not the column type.
 function bodyToContent(body: string): NoteContent {
   return {
     type: "doc",
@@ -42,13 +37,7 @@ function contentToBody(content: NoteContent | null): string {
   return parts.join("\n");
 }
 
-/**
- * NoteEditor (NOTE-03/04/06, D-06/07/08): a Display-weight title input + a
- * minimal multi-line body surface. Edits schedule a debounced optimistic
- * autosave; the muted status reads "Saving…" / "Saved" (or the destructive
- * failure copy). Flushes on blur. A header "⋯" menu opens the shared
- * delete-confirm dialog, which soft-deletes and routes to the empty state (D-16).
- */
+// NoteEditor (NOTE-03/04/06, D-06/07/08): title input + body surface; edits schedule a debounced optimistic autosave with a muted status (Saving…/Saved/failure), flush on blur; header menu opens the shared delete-confirm dialog (D-16).
 export function NoteEditor() {
   const { id } = useParams();
   const { data: note, isPending } = useNote(id);

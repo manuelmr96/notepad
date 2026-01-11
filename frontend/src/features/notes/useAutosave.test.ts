@@ -4,13 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { useAutosave } from "./useAutosave";
 
-/**
- * NOTE-06 autosave coverage: debounce coalescing (rapid keystrokes -> one PATCH
- * with the latest value), immediate flush() without waiting, and the
- * idle -> saving -> saved status transitions (plus "error" on a failed PATCH).
- *
- * `fetch` is mocked so no network is hit; fake timers drive the debounce.
- */
+// NOTE-06 autosave coverage: debounce coalescing, immediate flush(), and the idle->saving->saved transitions (plus "error" on a failed PATCH). fetch is mocked; fake timers drive the debounce.
 
 const NOTE_ID = "note-1";
 const DEBOUNCE_MS = 1000;

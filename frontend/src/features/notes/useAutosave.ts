@@ -3,21 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { type Note, type NoteUpdate, noteKey, notesKey } from "./queries";
 
-/**
- * NOTE-06 autosave: a debounced, optimistic PATCH against /notes/:id.
- *
- * Implements RESEARCH Pattern 6 exactly:
- *   onMutate  -> cancelQueries(["notes", id]); snapshot; optimistic setQueryData
- *   onError   -> rollback to the snapshot
- *   onSettled -> invalidate ["notes", id] AND ["notes"] (so the sidebar reorders
- *                by updated_at)
- *
- * Edits are debounced (~D-07 1-2s) and FLUSHED immediately on input blur, route
- * change, and `window` `beforeunload` so nothing is ever lost (Pitfall 5).
- *
- * `status` maps to the UI-SPEC copy: "saving" -> "Saving…", "saved" -> "Saved",
- * "error" -> the destructive autosave-failure copy (D-08).
- */
+// NOTE-06 autosave: debounced, optimistic PATCH against /notes/:id (RESEARCH Pattern 6 — onMutate snapshot+optimistic, onError rollback, onSettled invalidate note+list). Flushed on blur/route change/beforeunload (Pitfall 5). status maps to the UI-SPEC saving/saved/error copy (D-07/D-08).
 
 export type AutosaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -108,8 +94,7 @@ export function useAutosave(
         qc.setQueryData(noteKey(noteId), ctx.prev);
       }
     },
-    // Pattern 6: invalidate only on settle — the single note AND the list (so the
-    // sidebar reorders by updated_at).
+    // Pattern 6: invalidate only on settle — the single note AND the list (so the sidebar reorders by updated_at).
     onSettled: () => {
       if (!noteId) return;
       void qc.invalidateQueries({ queryKey: noteKey(noteId) });
@@ -143,8 +128,7 @@ export function useAutosave(
     };
   }, [noteId, flush]);
 
-  // Reset the debounce timer when switching notes so a stale patch can't target
-  // the wrong note.
+  // Reset the debounce timer when switching notes so a stale patch can't target the wrong note.
   useEffect(() => {
     return cancel;
   }, [noteId, cancel]);
