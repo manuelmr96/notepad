@@ -1,4 +1,4 @@
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut, MonitorOff } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,12 +13,13 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/stores/auth";
-import { useLogout } from "@/features/auth/useAuthMutations";
+import { useLogout, useLogoutAll } from "@/features/auth/useAuthMutations";
 
 // Sidebar-footer user menu (D-04, AUTH-04): shows the signed-in identity (falls back to "Account" when email is absent after a boot refresh) and a Log out action.
 export function UserMenu() {
   const email = useAuth((s) => s.email);
   const logout = useLogout();
+  const logoutAll = useLogoutAll();
   const identity = email ?? "Account";
 
   return (
@@ -55,6 +56,13 @@ export function UserMenu() {
             >
               <LogOut aria-hidden="true" />
               Log out
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => logoutAll.mutate()}
+              disabled={logoutAll.isPending}
+            >
+              <MonitorOff aria-hidden="true" />
+              Log out all sessions
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
