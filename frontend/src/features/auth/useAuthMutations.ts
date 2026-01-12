@@ -92,3 +92,20 @@ export function useLogout() {
     },
   });
 }
+
+// Log out everywhere (AUTH-05): revokes ALL of the user's refresh-token sessions server-side via revoke_all, then mirrors useLogout (clear in-memory state, redirect to /login; cleared even on network failure).
+export function useLogoutAll() {
+  const navigate = useNavigate();
+  return useMutation<void, Error, void>({
+    mutationFn: async () => {
+      try {
+        await apiFetch("/auth/logout-all", { method: "POST" });
+      } finally {
+        useAuth.getState().clear();
+      }
+    },
+    onSuccess: () => {
+      navigate("/login", { replace: true });
+    },
+  });
+}
